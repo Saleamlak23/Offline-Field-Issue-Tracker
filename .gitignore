@@ -6,3 +6,4 @@ coverage/
 *.sqlite-shm
 *.sqlite-wal
 .env
+Offline_Field_Issue_Tracker_plan.md
