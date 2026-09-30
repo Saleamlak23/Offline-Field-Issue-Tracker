@@ -1,5 +1,5 @@
 import type { AppDatabase } from './db.js';
-import type { ReportInput } from '@field-tracker/shared';
+import type { EventType, ReportInput, Status } from '@field-tracker/shared';
 
 interface ReportRow {
   id: number;
@@ -29,6 +29,28 @@ export interface Report {
   updatedAt: string;
 }
 
+export interface ReportEvent {
+  id: number;
+  reportId: number;
+  eventType: EventType;
+  fromStatus: string | null;
+  toStatus: string | null;
+  message: string | null;
+  actor: 'field_worker' | 'coordinator' | 'system';
+  createdAt: string;
+}
+
+interface EventRow {
+  id: number;
+  report_id: number;
+  event_type: EventType;
+  from_status: string | null;
+  to_status: string | null;
+  message: string | null;
+  actor: ReportEvent['actor'];
+  created_at: string;
+}
+
 function mapReport(row: ReportRow): Report {
   return {
     id: row.id,
@@ -43,6 +65,81 @@ function mapReport(row: ReportRow): Report {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function mapEvent(row: EventRow): ReportEvent {
+  return {
+    id: row.id,
+    reportId: row.report_id,
+    eventType: row.event_type,
+    fromStatus: row.from_status,
+    toStatus: row.to_status,
+    message: row.message,
+    actor: row.actor,
+    createdAt: row.created_at,
+  };
+}
+
+export function findReportById(database: AppDatabase, id: number): Report | undefined {
+  const row = database.prepare('SELECT * FROM reports WHERE id = ?').get(id) as ReportRow | undefined;
+  return row ? mapReport(row) : undefined;
+}
+
+export function listReports(database: AppDatabase, status?: Status): Report[] {
+  const rows = status
+    ? database.prepare('SELECT * FROM reports WHERE status = ? ORDER BY created_at DESC, id DESC').all(status)
+    : database.prepare('SELECT * FROM reports ORDER BY created_at DESC, id DESC').all();
+  return (rows as ReportRow[]).map(mapReport);
+}
+
+export function listReportEvents(database: AppDatabase, reportId: number): ReportEvent[] {
+  const rows = database
+    .prepare('SELECT * FROM report_events WHERE report_id = ? ORDER BY created_at ASC, id ASC')
+    .all(reportId) as EventRow[];
+  return rows.map(mapEvent);
+}
+
+const allowedTransitions: Partial<Record<Status, readonly Status[]>> = {
+  submitted: ['assigned', 'rejected'],
+  assigned: ['in_progress', 'rejected'],
+  in_progress: ['resolved', 'rejected'],
+  resolved: ['in_progress'],
+  rejected: ['submitted'],
+};
+
+export function canTransition(from: Status, to: Status): boolean {
+  return allowedTransitions[from]?.includes(to) ?? false;
+}
+
+export function transitionReport(
+  database: AppDatabase,
+  reportId: number,
+  toStatus: Status,
+  message?: string,
+): Report | undefined {
+  const existing = findReportById(database, reportId);
+  if (!existing) return undefined;
+  if (!canTransition(existing.status as Status, toStatus)) return undefined;
+
+  const eventType: EventType =
+    (existing.status === 'resolved' && toStatus === 'in_progress') ||
+    (existing.status === 'rejected' && toStatus === 'submitted')
+      ? 'REOPENED'
+      : 'STATUS_CHANGED';
+  const now = new Date().toISOString();
+  const updateTransaction = database.transaction(() => {
+    database
+      .prepare('UPDATE reports SET status = ?, revision = revision + 1, updated_at = ? WHERE id = ?')
+      .run(toStatus, now, reportId);
+    database
+      .prepare(`
+        INSERT INTO report_events (report_id, event_type, from_status, to_status, message, actor, created_at)
+        VALUES (?, ?, ?, ?, ?, 'coordinator', ?)
+      `)
+      .run(reportId, eventType, existing.status, toStatus, message ?? null, now);
+    return database.prepare('SELECT * FROM reports WHERE id = ?').get(reportId) as ReportRow;
+  });
+  return mapReport(updateTransaction());
 }
 
 export function findReportByClientId(database: AppDatabase, clientId: string): Report | undefined {
