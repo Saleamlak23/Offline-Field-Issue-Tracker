@@ -16,7 +16,7 @@ export class ReportValidationError extends Error {
   }
 }
 
-export async function createLocalReport(input: NewReportInput): Promise<LocalReport> {
+export async function createLocalReport(input: NewReportInput, status: 'draft' | 'submitted' = 'submitted'): Promise<LocalReport> {
   const clientId = crypto.randomUUID();
   const now = new Date().toISOString();
   const errors = validateReportInput({ ...input, clientId });
@@ -25,8 +25,8 @@ export async function createLocalReport(input: NewReportInput): Promise<LocalRep
   const report: LocalReport = {
     ...input,
     clientId,
-    status: 'submitted',
-    syncState: 'pending',
+    status,
+    syncState: status === 'draft' ? 'draft' : 'pending',
     syncAttempts: 0,
     createdAtLocal: now,
     updatedAtLocal: now,
@@ -34,12 +34,36 @@ export async function createLocalReport(input: NewReportInput): Promise<LocalRep
 
   await db.transaction('rw', db.reports, db.events, async () => {
     await db.reports.add(report);
-    await db.events.bulkAdd([
-      { clientId, eventType: 'CREATED', createdAt: now },
+    await db.events.bulkAdd(status === 'draft' ? [
+      { clientId, eventType: 'CREATED', toStatus: 'draft', createdAt: now },
+    ] : [
+      { clientId, eventType: 'CREATED', toStatus: 'submitted', createdAt: now },
       { clientId, eventType: 'SUBMIT_QUEUED', toStatus: 'submitted', createdAt: now },
     ]);
   });
   return report;
+}
+
+export async function submitLocalDraft(clientId: string): Promise<LocalReport> {
+  const current = await db.reports.get(clientId);
+  if (!current || current.status !== 'draft' || current.syncState !== 'draft') {
+    throw new Error('Only a saved draft can be submitted.');
+  }
+  const now = new Date().toISOString();
+  const submitted: LocalReport = {
+    ...current,
+    status: 'submitted',
+    syncState: 'pending',
+    updatedAtLocal: now,
+  };
+  await db.transaction('rw', db.reports, db.events, async () => {
+    await db.reports.put(submitted);
+    await db.events.bulkAdd([
+      { clientId, eventType: 'STATUS_CHANGED', fromStatus: 'draft', toStatus: 'submitted', createdAt: now },
+      { clientId, eventType: 'SUBMIT_QUEUED', toStatus: 'submitted', createdAt: now },
+    ]);
+  });
+  return submitted;
 }
 
 export async function getLocalReport(clientId: string): Promise<LocalReport | undefined> {
@@ -61,14 +85,16 @@ export async function updateUnsentReport(clientId: string, input: NewReportInput
   const updated: LocalReport = {
     ...current,
     ...input,
-    syncState: 'pending',
+    syncState: current.status === 'draft' ? 'draft' : 'pending',
     retryable: undefined,
     lastSyncError: undefined,
     updatedAtLocal: new Date().toISOString(),
   };
   await db.transaction('rw', db.reports, db.events, async () => {
     await db.reports.put(updated);
-    await db.events.add({ clientId, eventType: 'SUBMIT_QUEUED', toStatus: 'submitted', createdAt: updated.updatedAtLocal });
+    if (current.status !== 'draft') {
+      await db.events.add({ clientId, eventType: 'SUBMIT_QUEUED', toStatus: 'submitted', createdAt: updated.updatedAtLocal });
+    }
   });
   return updated;
 }
