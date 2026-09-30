@@ -31,6 +31,7 @@ afterEach(() => {
 describe('status transitions', () => {
   it('allows only transitions in the workflow table', () => {
     const allowed = new Set([
+      'draft:submitted',
       'submitted:assigned', 'submitted:rejected',
       'assigned:in_progress', 'assigned:rejected',
       'in_progress:resolved', 'in_progress:rejected',
