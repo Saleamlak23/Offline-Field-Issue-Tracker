@@ -4,7 +4,7 @@ import { categories, priorities } from '@field-tracker/shared';
 import { Link, useParams } from 'react-router-dom';
 import { db } from '../db.js';
 import { HistoryTimeline } from '../components/HistoryTimeline.js';
-import { ReportValidationError, updateUnsentReport } from '../localStore.js';
+import { ReportValidationError, submitLocalDraft, updateUnsentReport } from '../localStore.js';
 import { useConnectivity } from '../connectivity.js';
 
 export function ReportDetail() {
@@ -28,7 +28,16 @@ export function ReportDetail() {
   if (data === undefined) return <section className="empty-state">Loading saved report…</section>;
   if (data === null) return <section className="empty-state"><p>Saved report not found.</p><Link to="/">Back to reports</Link></section>;
   const { report, events } = data;
-  const canEdit = report.syncState === 'failed' && report.retryable === false && report.serverId === undefined;
+  const canEdit = report.status === 'draft' || (report.syncState === 'failed' && report.retryable === false && report.serverId === undefined);
+
+  async function submitDraft() {
+    try {
+      await submitLocalDraft(clientId);
+      await retryOne(clientId);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Could not submit this draft.');
+    }
+  }
 
   function startEditing() {
     setDescription(report.description);
@@ -86,6 +95,8 @@ export function ReportDetail() {
                 <div><dt>Workflow status</dt><dd>{report.status.replace('_', ' ')}</dd></div>
                 {report.serverId && <div><dt>Server reference</dt><dd>#{report.serverId}</dd></div>}
               </dl>
+              {report.status === 'draft' && <div className="sync-error-box"><strong>This draft is saved on this device.</strong><p>Submit it when it is ready to send to the coordinator.</p><button className="button button-primary" onClick={() => void submitDraft()}>Submit report</button></div>}
+              {saveError && <p className="field-error" role="alert">{saveError}</p>}
               {report.syncState === 'failed' && <div className="sync-error-box"><strong>{report.lastSyncError || 'The server did not accept this report.'}</strong><p>{report.syncAttempts} automatic {report.syncAttempts === 1 ? 'attempt' : 'attempts'} made.</p>{report.retryable !== false && <button className="button button-secondary" onClick={() => void retryOne(report.clientId)} disabled={isSyncing}>{isSyncing ? 'Retrying…' : 'Retry sync'}</button>}</div>}
             </>
           )}

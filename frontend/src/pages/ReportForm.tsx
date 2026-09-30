@@ -20,7 +20,8 @@ export function ReportForm() {
     try {
       const parsedDate = new Date(reportedAt);
       const normalizedDate = Number.isNaN(parsedDate.getTime()) ? '' : parsedDate.toISOString();
-      await createLocalReport({ category, priority, description, location, reportedAt: normalizedDate });
+      const intent = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+      await createLocalReport({ category, priority, description, location, reportedAt: normalizedDate }, intent?.value === 'draft' ? 'draft' : 'submitted');
       navigate('/');
     } catch (error) {
       if (error instanceof ReportValidationError) setErrors(error.fields);
@@ -45,7 +46,7 @@ export function ReportForm() {
         <label>Location<input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Area, landmark, or nearby facility" aria-invalid={Boolean(errors.location)} />{errors.location && <span className="field-error">{errors.location}</span>}</label>
         <label>When did you notice it?<input type="datetime-local" value={reportedAt} onChange={(event) => setReportedAt(event.target.value)} aria-invalid={Boolean(errors.reportedAt)} />{errors.reportedAt && <span className="field-error">{errors.reportedAt}</span>}</label>
         {errors.form && <p className="field-error" role="alert">{errors.form}</p>}
-        <div className="form-footer"><span>Saved locally first <span aria-hidden="true">·</span> Syncs when online</span><button className="button button-primary" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save report'}</button></div>
+        <div className="form-footer"><span>Saved locally first <span aria-hidden="true">·</span> Syncs when online</span><div className="inline-actions"><button className="button button-secondary" type="submit" value="draft" disabled={saving}>{saving ? 'Saving…' : 'Save draft'}</button><button className="button button-primary" type="submit" value="submitted" disabled={saving}>{saving ? 'Saving…' : 'Submit report'}</button></div></div>
       </form>
     </section>
   );

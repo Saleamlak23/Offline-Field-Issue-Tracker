@@ -3,6 +3,7 @@ import type { LocalReport } from '../db.js';
 import { useConnectivity } from '../connectivity.js';
 
 const syncLabels = {
+  draft: 'Draft · on this device',
   pending: 'Pending sync',
   synced: 'Synced',
   failed: 'Sync failed',
