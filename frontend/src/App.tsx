@@ -1,6 +1,12 @@
-import { Link, Navigate, Route, Routes } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { ReportForm } from './pages/ReportForm.js';
+import { ReportList } from './pages/ReportList.js';
 
 export function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const currentRole = location.pathname.startsWith('/coordinator') ? 'coordinator' : 'field_worker';
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -9,12 +15,12 @@ export function App() {
           <span>fieldnote</span>
         </Link>
         <nav aria-label="Main navigation">
-          <Link to="/">Field reports</Link>
-          <Link to="/coordinator">Coordinator</Link>
+          <Link to="/" aria-current={currentRole === 'field_worker' ? 'page' : undefined}>Field reports</Link>
+          <Link to="/coordinator" aria-current={currentRole === 'coordinator' ? 'page' : undefined}>Coordinator</Link>
         </nav>
         <label className="role-switch">
           <span>Viewing as</span>
-          <select aria-label="Viewing as" defaultValue="field_worker">
+          <select aria-label="Viewing as" value={currentRole} onChange={(event) => navigate(event.target.value === 'coordinator' ? '/coordinator' : '/')}>
             <option value="field_worker">Field worker</option>
             <option value="coordinator">Coordinator</option>
           </select>
@@ -22,7 +28,8 @@ export function App() {
       </header>
       <main>
         <Routes>
-          <Route path="/" element={<section className="welcome"><p className="eyebrow">FIELD OPERATIONS</p><h1>Issues, captured wherever the work takes you.</h1><p>Your reports will stay on this device and sync when you’re back online.</p></section>} />
+          <Route path="/" element={<ReportList />} />
+          <Route path="/reports/new" element={<ReportForm />} />
           <Route path="/coordinator" element={<section className="welcome"><p className="eyebrow">COORDINATOR DESK</p><h1>Review and move issues forward.</h1><p>Live reports and status actions will appear here.</p></section>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
