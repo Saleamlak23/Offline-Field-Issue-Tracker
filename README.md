@@ -137,14 +137,12 @@ The shared transition rules are enforced by the API. Rejection requires a reason
 
 ## Time and Future Improvements
 
-Approximate time spent: **1.5 hours**.
+Approximate time spent: **2 hours**.
 
 With more time, I would add authentication and server-enforced roles, offline coordinator support with inbound synchronization and revision-based conflict detection, background sync, audit records for rejected transition attempts, batched sync, and attachment/GPS support.
 
 ## AI and Development-Tool Disclosure
 
-ChatGPT (Codex), **GPT 6 Luna Medium**, was used for development assistance across both the frontend and backend. In this review, Codex compared the exercise requirements with the repository and identified that workers could not save drafts, and that the README needed clearer testing priorities and disclosure details.
+Before implementation, Claude (Anthropic) helped design and document the system. Based on the technology stack I specified, it proposed the data model, status transition table, synchronization and idempotency algorithm, API contract, and test plan. I reviewed those decisions against the exercise requirements. I rejected the proposed Draft workflow where it did not match the requirements and corrected it to follow the required Draft → Submitted transition.
 
-The accepted recommendations in this review were to add a locally saved, editable draft that enters the sync queue only after submission, document the Draft → Submitted path, and explain why tests prioritize persistence, idempotency, validation, workflow transitions, and sync recovery. The documentation and feature work were developed on `fix/submission-documentation` and `feature/draft-report-workflow`, then the feature branch was merged into the documentation branch. No suggestions were explicitly rejected during this review.
-
-The implementation was reviewed against the shared status rules and local persistence and sync code. The frontend production build completed successfully; automated test suites were not run during this review. Development tools included VS Code, Node.js/npm, TypeScript, Vite, Vitest, and SQLite. The project author is responsible for reviewing and validating all submitted code.
+I used ChatGPT (Codex), **GPT 6 Luna Medium**, to assist with implementing the frontend and backend and to critique my work. VS Code was my code editor, with Codex used as an AI coding agent for review and implementation assistance. I verified the resulting behavior with the backend and frontend test suites and production builds; all passed. I remain responsible for reviewing and understanding the submitted code.
