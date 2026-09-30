@@ -1,4 +1,5 @@
 import type { AppDatabase } from './db.js';
+import { canTransition } from '@field-tracker/shared';
 import type { EventType, ReportInput, Status } from '@field-tracker/shared';
 
 interface ReportRow {
@@ -99,17 +100,7 @@ export function listReportEvents(database: AppDatabase, reportId: number): Repor
   return rows.map(mapEvent);
 }
 
-const allowedTransitions: Partial<Record<Status, readonly Status[]>> = {
-  submitted: ['assigned', 'rejected'],
-  assigned: ['in_progress', 'rejected'],
-  in_progress: ['resolved', 'rejected'],
-  resolved: ['in_progress'],
-  rejected: ['submitted'],
-};
-
-export function canTransition(from: Status, to: Status): boolean {
-  return allowedTransitions[from]?.includes(to) ?? false;
-}
+export { canTransition } from '@field-tracker/shared';
 
 export function transitionReport(
   database: AppDatabase,

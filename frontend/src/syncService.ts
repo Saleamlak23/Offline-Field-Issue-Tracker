@@ -14,6 +14,8 @@ export class SyncService {
   private readonly now: () => number;
   private readonly timeoutMs: number;
   private readonly retryAfter = new Map<string, number>();
+  private readonly retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private onlineOverride: boolean | undefined;
   private cycle: Promise<void> | undefined;
 
   constructor(options: SyncServiceOptions = {}) {
@@ -23,8 +25,13 @@ export class SyncService {
     this.timeoutMs = options.timeoutMs ?? 8000;
   }
 
-  async runSyncCycle(force = false, clientId?: string): Promise<void> {
-    if (!this.isOnline()) return;
+  setOnlineState(isOnline: boolean) {
+    this.onlineOverride = isOnline;
+  }
+
+  async runSyncCycle(force = false, clientId?: string, onlineOverride?: boolean): Promise<void> {
+    if (onlineOverride !== undefined) this.onlineOverride = onlineOverride;
+    if (!(this.onlineOverride ?? this.isOnline())) return;
     if (this.cycle) return this.cycle;
 
     this.cycle = this.syncReports(force, clientId).finally(() => {
@@ -33,8 +40,8 @@ export class SyncService {
     return this.cycle;
   }
 
-  async retryOne(clientId: string): Promise<void> {
-    await this.runSyncCycle(true, clientId);
+  async retryOne(clientId: string, onlineOverride?: boolean): Promise<void> {
+    await this.runSyncCycle(true, clientId, onlineOverride);
   }
 
   private async syncReports(force: boolean, clientId?: string): Promise<void> {
@@ -47,6 +54,7 @@ export class SyncService {
       if (!force && this.retryAfter.get(report.clientId)! > this.now()) continue;
       if (report.retryable === false && !force) continue;
 
+      this.clearRetry(report.clientId);
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
       try {
@@ -67,6 +75,7 @@ export class SyncService {
           await db.events.add({ clientId: report.clientId, eventType: 'SYNCED', createdAt: new Date(this.now()).toISOString() });
         });
         this.retryAfter.delete(report.clientId);
+        this.clearRetry(report.clientId);
       } catch (error) {
         const retryable = isTransientSyncError(error);
         const message = error instanceof Error ? error.message : 'Sync failed unexpectedly.';
@@ -84,11 +93,23 @@ export class SyncService {
         if (retryable) {
           const delay = Math.min(30_000, 2 ** report.syncAttempts * 2_000);
           this.retryAfter.set(report.clientId, failedAt + delay);
+          this.retryTimers.set(report.clientId, setTimeout(() => {
+            this.retryTimers.delete(report.clientId);
+            void this.runSyncCycle(false, undefined, this.onlineOverride);
+          }, delay));
+        } else {
+          this.retryAfter.delete(report.clientId);
         }
       } finally {
         clearTimeout(timeout);
       }
     }
+  }
+
+  private clearRetry(clientId: string) {
+    const timer = this.retryTimers.get(clientId);
+    if (timer) clearTimeout(timer);
+    this.retryTimers.delete(clientId);
   }
 }
 

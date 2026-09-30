@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { db } from './db.js';
 import { createLocalReport } from './localStore.js';
 import { SyncService } from './syncService.js';
+import type { ServerReport } from './apiClient.js';
 
 const validInput = {
   category: 'water' as const,
@@ -60,7 +61,19 @@ describe('sync service', () => {
     const report = await createPendingReport();
     const service = new SyncService({
       isOnline: () => true,
-      sendReport: async () => ({ id: 12, clientId: report.clientId, revision: 1 }),
+      sendReport: async () => ({
+        id: 12,
+        clientId: report.clientId,
+        category: report.category,
+        description: report.description,
+        location: report.location,
+        priority: report.priority,
+        status: report.status,
+        reportedAt: report.reportedAt,
+        revision: 1,
+        createdAt: report.createdAtLocal,
+        updatedAt: report.updatedAtLocal,
+      } satisfies ServerReport),
     });
 
     await service.runSyncCycle();

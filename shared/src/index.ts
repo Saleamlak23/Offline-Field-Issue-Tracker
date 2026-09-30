@@ -36,6 +36,18 @@ export interface ReportInput {
 
 export type ValidationErrors = Record<string, string>;
 
+const allowedTransitions: Partial<Record<Status, readonly Status[]>> = {
+  submitted: ['assigned', 'rejected'],
+  assigned: ['in_progress', 'rejected'],
+  in_progress: ['resolved', 'rejected'],
+  resolved: ['in_progress'],
+  rejected: ['submitted'],
+};
+
+export function canTransition(from: Status, to: Status): boolean {
+  return allowedTransitions[from]?.includes(to) ?? false;
+}
+
 const uuidV4Pattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i;
 

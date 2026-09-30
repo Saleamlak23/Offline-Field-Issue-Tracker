@@ -21,7 +21,7 @@ export function ConnectivityProvider({ children }: { children: ReactNode }) {
     if (!isOnline) return;
     setIsSyncing(true);
     try {
-      await syncService.runSyncCycle(true);
+      await syncService.runSyncCycle(true, undefined, isOnline);
     } finally {
       setIsSyncing(false);
     }
@@ -31,7 +31,7 @@ export function ConnectivityProvider({ children }: { children: ReactNode }) {
     if (!isOnline) return;
     setIsSyncing(true);
     try {
-      await syncService.retryOne(clientId);
+      await syncService.retryOne(clientId, isOnline);
     } finally {
       setIsSyncing(false);
     }
@@ -52,9 +52,10 @@ export function ConnectivityProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    syncService.setOnlineState(isOnline);
     if (!isOnline) return;
-    void syncService.runSyncCycle();
-    const interval = window.setInterval(() => void syncService.runSyncCycle(), 15_000);
+    void syncService.runSyncCycle(false, undefined, isOnline);
+    const interval = window.setInterval(() => void syncService.runSyncCycle(false, undefined, isOnline), 15_000);
     return () => window.clearInterval(interval);
   }, [isOnline]);
 

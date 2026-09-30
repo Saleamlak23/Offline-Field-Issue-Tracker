@@ -49,3 +49,26 @@ export async function getLocalReport(clientId: string): Promise<LocalReport | un
 export async function getReportEvents(clientId: string) {
   return db.events.where('clientId').equals(clientId).sortBy('createdAt');
 }
+
+export async function updateUnsentReport(clientId: string, input: NewReportInput): Promise<LocalReport> {
+  const current = await db.reports.get(clientId);
+  if (!current || current.serverId !== undefined || current.syncState === 'synced') {
+    throw new Error('Only a report that has not reached the server can be edited.');
+  }
+  const errors = validateReportInput({ ...input, clientId });
+  if (Object.keys(errors).length > 0) throw new ReportValidationError(errors);
+
+  const updated: LocalReport = {
+    ...current,
+    ...input,
+    syncState: 'pending',
+    retryable: undefined,
+    lastSyncError: undefined,
+    updatedAtLocal: new Date().toISOString(),
+  };
+  await db.transaction('rw', db.reports, db.events, async () => {
+    await db.reports.put(updated);
+    await db.events.add({ clientId, eventType: 'SUBMIT_QUEUED', toStatus: 'submitted', createdAt: updated.updatedAtLocal });
+  });
+  return updated;
+}

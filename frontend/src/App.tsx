@@ -3,6 +3,8 @@ import { ReportForm } from './pages/ReportForm.js';
 import { ReportList } from './pages/ReportList.js';
 import { ConnectivityProvider } from './connectivity.js';
 import { SyncBanner } from './components/SyncBanner.js';
+import { ReportDetail } from './pages/ReportDetail.js';
+import { Coordinator, CoordinatorReportDetail } from './pages/Coordinator.js';
 
 export function App() {
   const location = useLocation();
@@ -34,7 +36,9 @@ export function App() {
         <Routes>
           <Route path="/" element={<ReportList />} />
           <Route path="/reports/new" element={<ReportForm />} />
-          <Route path="/coordinator" element={<section className="welcome"><p className="eyebrow">COORDINATOR DESK</p><h1>Review and move issues forward.</h1><p>Live reports and status actions will appear here.</p></section>} />
+          <Route path="/reports/:clientId" element={<ReportDetail />} />
+          <Route path="/coordinator/reports/:id" element={<CoordinatorReportDetail />} />
+          <Route path="/coordinator" element={<Coordinator />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
