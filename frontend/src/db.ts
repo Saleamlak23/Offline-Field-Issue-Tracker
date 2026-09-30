@@ -11,6 +11,7 @@ export interface LocalReport {
   reportedAt: string;
   syncState: 'pending' | 'synced' | 'failed';
   syncAttempts: number;
+  retryable?: boolean;
   lastSyncError?: string;
   serverId?: number;
   revision?: number;

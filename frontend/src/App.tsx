@@ -1,6 +1,8 @@
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { ReportForm } from './pages/ReportForm.js';
 import { ReportList } from './pages/ReportList.js';
+import { ConnectivityProvider } from './connectivity.js';
+import { SyncBanner } from './components/SyncBanner.js';
 
 export function App() {
   const location = useLocation();
@@ -8,6 +10,7 @@ export function App() {
   const currentRole = location.pathname.startsWith('/coordinator') ? 'coordinator' : 'field_worker';
 
   return (
+    <ConnectivityProvider>
     <div className="app-shell">
       <header className="topbar">
         <Link className="brand" to="/" aria-label="Fieldnote home">
@@ -26,6 +29,7 @@ export function App() {
           </select>
         </label>
       </header>
+      <SyncBanner />
       <main>
         <Routes>
           <Route path="/" element={<ReportList />} />
@@ -36,5 +40,6 @@ export function App() {
       </main>
       <footer>Fieldnote <span>·</span> Offline-ready issue tracking</footer>
     </div>
+    </ConnectivityProvider>
   );
 }
