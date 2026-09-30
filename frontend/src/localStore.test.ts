@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppDB, db } from './db.js';
-import { createLocalReport, ReportValidationError } from './localStore.js';
+import { createLocalReport, ReportValidationError, submitLocalDraft, updateUnsentReport } from './localStore.js';
 
 const validInput = {
   category: 'water' as const,
@@ -42,5 +42,29 @@ describe('local report store', () => {
     expect((await reopened.reports.toArray())[0].description).toBe(validInput.description);
     await reopened.close();
     await db.open();
+  });
+
+  it('keeps drafts local while editing, then queues them when submitted', async () => {
+    vi.stubGlobal('crypto', { randomUUID: () => 'a1b2c3d4-e5f6-4789-8123-abcdef012345' });
+    const draft = await createLocalReport(validInput, 'draft');
+
+    expect(draft).toMatchObject({ status: 'draft', syncState: 'draft' });
+    expect((await db.events.where('clientId').equals(draft.clientId).toArray()).map((event) => event.eventType))
+      .toEqual(['CREATED']);
+
+    await updateUnsentReport(draft.clientId, { ...validInput, description: 'Updated description for the draft.' });
+    await db.close();
+    await db.open();
+    expect(await db.reports.get(draft.clientId)).toMatchObject({
+      status: 'draft',
+      syncState: 'draft',
+      description: 'Updated description for the draft.',
+    });
+
+    const submitted = await submitLocalDraft(draft.clientId);
+
+    expect(submitted).toMatchObject({ status: 'submitted', syncState: 'pending' });
+    expect((await db.events.where('clientId').equals(draft.clientId).toArray()).map((event) => event.eventType))
+      .toEqual(['CREATED', 'STATUS_CHANGED', 'SUBMIT_QUEUED']);
   });
 });
