@@ -37,6 +37,7 @@ export interface ReportInput {
 export type ValidationErrors = Record<string, string>;
 
 const allowedTransitions: Partial<Record<Status, readonly Status[]>> = {
+  draft: ['submitted'],
   submitted: ['assigned', 'rejected'],
   assigned: ['in_progress', 'rejected'],
   in_progress: ['resolved', 'rejected'],

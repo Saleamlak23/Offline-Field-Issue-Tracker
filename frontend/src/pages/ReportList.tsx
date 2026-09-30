@@ -5,7 +5,7 @@ import { ReportCard } from '../components/ReportCard.js';
 
 export function ReportList() {
   const reports = useLiveQuery(() => db.reports.orderBy('createdAtLocal').reverse().toArray(), []);
-  const pendingCount = reports?.filter((report) => report.syncState !== 'synced').length ?? 0;
+  const pendingCount = reports?.filter((report) => report.syncState === 'pending' || report.syncState === 'failed').length ?? 0;
 
   return (
     <section>

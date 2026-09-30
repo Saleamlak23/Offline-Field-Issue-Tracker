@@ -9,7 +9,7 @@ export interface LocalReport {
   priority: Priority;
   status: Status;
   reportedAt: string;
-  syncState: 'pending' | 'synced' | 'failed';
+  syncState: 'draft' | 'pending' | 'synced' | 'failed';
   syncAttempts: number;
   retryable?: boolean;
   lastSyncError?: string;
