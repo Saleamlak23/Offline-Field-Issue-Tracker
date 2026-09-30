@@ -1,0 +1,32 @@
+:root {
+  font-family: 'Segoe UI', sans-serif;
+  color: #172b25;
+  background: #f5f7f2;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --green: #245e49;
+  --muted: #68766f;
+  --line: #e1e8df;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; }
+.app-shell { min-height: 100vh; display: flex; flex-direction: column; }
+.topbar { height: 76px; display: flex; align-items: center; gap: 56px; padding: 0 clamp(20px, 6vw, 88px); border-bottom: 1px solid var(--line); background: #fbfcf9; }
+.brand { display: inline-flex; align-items: center; gap: 10px; font: 800 19px 'Segoe UI', sans-serif; letter-spacing: -.6px; }
+.brand-mark { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: var(--green); color: white; font-size: 16px; }
+nav { display: flex; align-items: center; gap: 28px; font-size: 13px; font-weight: 600; color: #64736b; }
+nav a:hover, nav a:focus-visible { color: var(--green); }
+.role-switch { display: flex; align-items: center; gap: 10px; margin-left: auto; color: var(--muted); font-size: 12px; }
+.role-switch select { border: 1px solid var(--line); border-radius: 8px; background: white; color: #293b33; padding: 8px 30px 8px 10px; font-size: 12px; }
+main { width: min(1120px, 100%); margin: 0 auto; padding: 64px 28px; flex: 1; }
+.welcome { max-width: 720px; padding: 58px 0; }
+.eyebrow { margin: 0 0 16px; color: var(--green); font-size: 11px; font-weight: 700; letter-spacing: 1.7px; }
+h1 { max-width: 680px; margin: 0; font: 700 clamp(36px, 5vw, 58px)/1.08 'Segoe UI', sans-serif; letter-spacing: -2px; }
+.welcome > p:last-child { margin-top: 22px; color: var(--muted); font-size: 16px; line-height: 1.7; }
+footer { padding: 22px clamp(20px, 6vw, 88px); border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+footer span { padding: 0 6px; color: #a3b0a8; }
+@media (max-width: 680px) { .topbar { gap: 20px; height: auto; min-height: 68px; flex-wrap: wrap; padding-top: 12px; padding-bottom: 12px; } nav { order: 3; width: 100%; } .role-switch span { display: none; } main { padding: 36px 22px; } .welcome { padding: 42px 0; } h1 { letter-spacing: -1.4px; } }
